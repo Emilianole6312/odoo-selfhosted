@@ -29,6 +29,23 @@ como proyecto de referencia para prácticas de SRE/DevOps.
 | IaC            |                          |
 | CI             | GitHub Actions          |
 
+# Migration
+
+Script de transformación del catálogo del POS anterior a formato Odoo 17.
+
+## Uso
+
+```bash
+uv run --with=pandas ./importarodoo.py inventario.csv 
+```
+
+## Archivos generados
+
+- `<nombre>_odoo.csv` — importar directamente en Odoo
+- `<nombre>_variantes.csv` — productos con presentación múltiple, requiere procesamiento manual
+- `<nombre>_barcodes_a_revisar.csv` — barcodes con dígito verificador inválido
+
+
 ## Estado
 
 Cargando...
