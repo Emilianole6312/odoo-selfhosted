@@ -30,6 +30,7 @@ services:
     volumes:
       - ./volumes/odoo/addons:/mnt/extra-addons
       - ./volumes/odoo/data:/var/lib/odoo
+      - ./config/odoo.conf:/etc/odoo/odoo.conf
     ports:
       - "8069:8069"
     networks:
