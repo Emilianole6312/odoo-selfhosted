@@ -37,6 +37,16 @@ def limpiar_precio(valor):
         return 0.0
     return float(re.sub(r'[^\d.]', '', str(valor)))
 
+def extraer_precio_paquete(valor):
+    """De '$24.00($6.00)' extrae 24.00 (precio del paquete/caja)."""
+    match = re.search(r'\$([\d.]+)\(\$[\d.]+\)', str(valor))
+    return float(match.group(1)) if match else 0.0
+
+def extraer_precio_pieza(valor):
+    """De '$24.00($6.00)' extrae 6.00 (precio de la pieza suelta)."""
+    match = re.search(r'\$[\d.]+\(\$([\d.]+)\)', str(valor))
+    return float(match.group(1)) if match else 0.0
+
 def limpiar_existencias(valor):
     """Extrae solo el número, ignora texto como 'paq'."""
     if pd.isna(valor):
@@ -83,13 +93,13 @@ def validar_barcode(barcode):
     return b, 'invalido', False
 
 def inferir_uom(presentacion):
-    """Gramaje, granel y kg → kg. Todo lo demás → Unit(s)"""
+    """Gramaje, granel y kg → kg. Todo lo demás → Unidades"""
     if pd.isna(presentacion):
-        return 'Unit(s)'
+        return 'Unidades'
     p = str(presentacion).lower()
     if any(u in p for u in ['kg', 'g ', 'gr', 'gramos', 'granel', 'gramaje']):
         return 'kg'
-    return 'Unit(s)'
+    return 'Unidades'
 
 # ── Separar filas con precio doble (pieza/paquete) ─────────────────────
 mask_doble   = df['Precio'].apply(es_precio_doble)
@@ -111,7 +121,7 @@ odoo_simple = pd.DataFrame({
     'name': (
         df_simple['Nombre'].str.strip() + ' ' +
         df_simple['Presentacion'].fillna('').str.strip()
-    ).str.strip(),    
+    ).str.strip(),
     'sale_price':       df_simple['sale_price'],
     'standard_price':   df_simple['cost_price'],
     'barcode':          df_simple['barcode'],   # se importa aunque el dígito sea inválido
@@ -121,19 +131,72 @@ odoo_simple = pd.DataFrame({
     'active':           'true',
 })
 
-# ── Reporte de barcodes a revisar (no se excluyen de la importación) ───
-sospechosos = df_simple[~df_simple['barcode_valido']][
+sospechosos_registros = df_simple[~df_simple['barcode_valido']][
     ['Nombre', 'barcode', 'barcode_tipo']
-].rename(columns={'Nombre': 'nombre', 'barcode_tipo': 'tipo_detectado'})
+].rename(columns={'Nombre': 'nombre', 'barcode_tipo': 'tipo_detectado'}).to_dict('records')
+
+# ── Procesar catálogo con precio doble (pieza + paquete, automático) ───
+# A diferencia del flujo interactivo de variantesrodoo.py, aquí SIEMPRE
+# se generan ambos productos: uno en UoM "Unidades" (precio pieza) y
+# otro en UoM "Paquetes" (precio paquete), sin preguntar al usuario.
+filas_variantes = []
+
+for _, row in df_variantes.iterrows():
+    nombre         = str(row['Nombre']).strip()
+    costo          = limpiar_precio(row['Costo'])
+    precio_paquete = extraer_precio_paquete(row['Precio'])
+    precio_pieza   = extraer_precio_pieza(row['Precio'])
+
+    barcode_original = str(row['Codigo barras']).strip()
+    barcode_val, barcode_tipo, barcode_valido = validar_barcode(barcode_original)
+    if not barcode_valido:
+        sospechosos_registros.append({
+            'nombre': nombre,
+            'barcode': barcode_val,
+            'tipo_detectado': barcode_tipo,
+        })
+
+    # Fila pieza — UoM "Unidades", sin barcode propio (el barcode
+    # impreso en el producto corresponde al paquete/caja, no a la pieza suelta)
+    filas_variantes.append({
+        'name':             nombre,
+        'sale_price':       precio_pieza,
+        'standard_price':   costo,
+        'barcode':          '',
+        'uom_id':           'Unidades',
+        'type':             'consu',
+        'available_in_pos': 'true',
+        'active':           'true',
+    })
+
+    # Fila paquete — UoM "Paquetes", conserva el barcode original
+    filas_variantes.append({
+        'name':             nombre + ' (Paquete)',
+        'sale_price':       precio_paquete,
+        'standard_price':   costo,
+        'barcode':          barcode_val,
+        'uom_id':           'Paquetes',
+        'type':             'consu',
+        'available_in_pos': 'true',
+        'active':           'true',
+    })
+
+odoo_variantes = pd.DataFrame(filas_variantes)
+
+# ── Combinar catálogo simple + variantes divididas ──────────────────────
+odoo_final = pd.concat([odoo_simple, odoo_variantes], ignore_index=True)
+
+sospechosos = pd.DataFrame(sospechosos_registros)
 
 # ── Reporte por consola ─────────────────────────────────────────────────
 exist_negativas = (df_simple['existencias'] < 0).sum()
 
 print(f"\n{'─'*55}")
-print(f"  Productos simples procesados:   {len(odoo_simple)}")
-print(f"  Separados para revisión manual: {len(df_variantes)}  (precio pieza/paquete)")
-print(f"  Barcodes a revisar:             {len(sospechosos)}  (dígito verificador no coincide)")
-print(f"  Existencias negativas:          {exist_negativas}  (ignoradas, tipo=consu)")
+print(f"  Productos simples procesados:            {len(odoo_simple)}")
+print(f"  Productos con precio doble divididos:    {len(df_variantes)}  → {len(odoo_variantes)} filas (Unidades + Paquetes)")
+print(f"  Total de filas en el CSV final:          {len(odoo_final)}")
+print(f"  Barcodes a revisar:                      {len(sospechosos)}  (dígito verificador no coincide)")
+print(f"  Existencias negativas:                   {exist_negativas}  (ignoradas, tipo=consu)")
 
 if not sospechosos.empty:
     print(f"\n  Detalle de barcodes a revisar:")
@@ -141,16 +204,16 @@ if not sospechosos.empty:
         print(f"    {row['barcode']:<16} [{row['tipo_detectado']:<8}] {row['nombre']}")
 
 print(f"{'─'*55}")
+print("  NOTA: la UoM 'Paquetes' no es nativa de Odoo; créala en")
+print("  Inventario > Configuración > Unidades de medida antes de importar.")
+print(f"{'─'*55}")
 
 # ── Exportar ───────────────────────────────────────────────────────────
-salida_simple      = archivo.stem + '_odoo.csv'
-salida_variantes   = archivo.stem + '_variantes.csv'
+salida_final       = archivo.stem + '_odoo.csv'
 salida_sospechosos = archivo.stem + '_barcodes_a_revisar.csv'
 
-odoo_simple.to_csv(salida_simple, index=False)
-df_variantes.to_csv(salida_variantes, index=False)
+odoo_final.to_csv(salida_final, index=False)
 sospechosos.to_csv(salida_sospechosos, index=False)
 
-print(f"\n→ {salida_simple}")
-print(f"→ {salida_variantes}        (requiere procesamiento manual)")
+print(f"\n→ {salida_final}")
 print(f"→ {salida_sospechosos}  (revisar contra producto físico)\n")
