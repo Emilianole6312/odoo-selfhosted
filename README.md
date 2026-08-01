@@ -39,11 +39,22 @@ Script de transformación del catálogo del POS anterior a formato Odoo 17.
 uv run --with=pandas ./importarodoo.py inventario.csv 
 ```
 
+Para procesar productos con precio de paquete y de pieza de forma interactiva:
+
+```bash
+uv run --with=pandas ./procesarvariantes.py inventario_variantes.csv
+```
+
+El script pregunta por cada producto si se elimina, se conserva una
+presentación o se conservan ambas. Cuando se conservan ambas, genera un
+EAN-13 para la presentación que no conserve el código original.
+
 ## Archivos generados
 
 - `<nombre>_odoo.csv` — importar directamente en Odoo
 - `<nombre>_variantes.csv` — productos con presentación múltiple, requiere procesamiento manual
 - `<nombre>_barcodes_a_revisar.csv` — barcodes con dígito verificador inválido
+- `<nombre>_barcodes_generados.csv` — códigos generados por `procesarvariantes.py`
 
 
 ## Estado
