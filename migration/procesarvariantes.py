@@ -102,7 +102,7 @@ def crear_producto(fila, precio, uom, barcode):
         "sale_price": f"{precio:.2f}",
         "standard_price": f"{limpiar_precio(fila['Costo']):.2f}",
         "barcode": barcode,
-        "uom_id": uom,
+        "uom_id": "Unidades",
         "type": "consu",
         "available_in_pos": "true",
         "active": "true",
