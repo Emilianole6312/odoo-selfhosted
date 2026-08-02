@@ -55,6 +55,28 @@ EAN-13 para la presentación que no conserve el código original.
 - `<nombre>_variantes.csv` — productos con presentación múltiple, requiere procesamiento manual
 - `<nombre>_barcodes_a_revisar.csv` — barcodes con dígito verificador inválido
 - `<nombre>_barcodes_generados.csv` — códigos generados por `procesarvariantes.py`
+- `concatenado_conservados.csv` — resultado de `migration/concatenar_csv.py` con registros únicos por código de barras
+- `concatenado_descartados.csv` — registros duplicados descartados para conservar la información
+
+## Script adicional
+
+Para concatenar dos o más CSV, ordenar por código de barras, revisar duplicados y escoger qué versión conservar, y dejar un csv listo para importar a Odoo:
+
+```bash
+python3 ./migration/concatenar_csv.py inventario_a.csv inventario_b.csv
+```
+
+El script asume que la columna del codigo de barras es la cuarta, pero puede ajustarse con el argumento `--barcode-index #`:
+
+```bash
+python3 ./migration/concatenar_csv.py --barcode-index # inventario_a.csv inventario_b.csv
+```
+
+El script descarta automáticamente los productos con precio de venta o de compra cero, para ello toma la columna #2 como precio de venta y la #3 como precio de compra, las columnas pueden se ajustadas con los argumentos `--price-index` y `--cost-index`:
+ 
+```bash
+python3 ./migration/concatenar_csv.py --cost-index 2 --price-index 3 inventario_a.csv inventario_b.csv
+```
 
 
 ## Estado
