@@ -1,2 +1,4 @@
 .env
 migration/*.csv
+infra/volumes/backups/
+infra/logs/
