@@ -97,10 +97,27 @@ filestore:
 
 Los backups se transfieren automáticamente al servidor secundario y a la nube
 
-**[TBD - Definir en implementación]**
-- Automatización del procedimiento mediante script.
-- Uso de cron para ejecutar el script automáticamente.
-- Notificación al administrador en caso de errores, o inconsistencias.
+### 7.3 Automatización
+
+Los backups se ejecutan automáticamente mediante cron en mixtli.
+
+**Configuración en crontab:**
+
+```bash
+# Editar
+crontab -e
+
+# Agregar las lineas
+# Backup diario
+59 23 * * * /opt/odoo-server/infra/scripts/backup.sh >> /opt/odoo-server/infra/logs/backup.cron.log 2>&1
+# Backup semanal
+59 23 * * 0 /opt/odoo-server/infra/scripts/backup-semanal.sh >> /opt/odoo-server/infra/logs/backup.cron.log 2>&1
+```
+
+- Ejecución: Diario a las 23:59 | Cada domingo a las 23:59
+- Script: `/opt/odoo-server/infra/scripts/backup.sh`
+- Logs: `/opt/odoo-server/infra/logs/backup.cron.log`
+- Stderr y stdout se redirigen al archivo (2>&1)
 
 ## 8. Retención
 | Backup | Tiempo de retención | 
