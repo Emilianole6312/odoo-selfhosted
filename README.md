@@ -29,11 +29,11 @@ como proyecto de referencia para prácticas de SRE/DevOps.
 | IaC            |                          |
 | CI             | GitHub Actions          |
 
-# Migration
+## Migración 
 
 Script de transformación del catálogo del POS anterior a formato Odoo 17.
 
-## Uso
+### Uso
 
 ```bash
 uv run --with=pandas ./importarodoo.py inventario.csv 
@@ -49,7 +49,7 @@ El script pregunta por cada producto si se elimina, se conserva una
 presentación o se conservan ambas. Cuando se conservan ambas, genera un
 EAN-13 para la presentación que no conserve el código original.
 
-## Archivos generados
+### Archivos generados
 
 - `<nombre>_odoo.csv` — importar directamente en Odoo
 - `<nombre>_variantes.csv` — productos con presentación múltiple, requiere procesamiento manual
@@ -58,7 +58,7 @@ EAN-13 para la presentación que no conserve el código original.
 - `concatenado_conservados.csv` — resultado de `migration/concatenar_csv.py` con registros únicos por código de barras
 - `concatenado_descartados.csv` — registros duplicados descartados para conservar la información
 
-## Script adicional
+### Script adicional
 
 Para concatenar dos o más CSV, ordenar por código de barras, revisar duplicados y escoger qué versión conservar, y dejar un csv listo para importar a Odoo:
 
@@ -78,6 +78,20 @@ El script descarta automáticamente los productos con precio de venta o de compr
 python3 ./migration/concatenar_csv.py --cost-index 2 --price-index 3 inventario_a.csv inventario_b.csv
 ```
 
+## Backups automáticos
+
+Los backups corren automáticamente cada día a las 23:59.
+
+Para configurar en un servidor nuevo:
+
+```bash
+crontab -e
+# Agregar: 
+# 59 23 * * * /opt/odoo-server/infra/scripts/backup.sh >> /opt/odoo-server/infra/logs/backup.cron.log 2>&1
+# 59 23 * * 0 /opt/odoo-server/infra/scripts/backup-semanal.sh >> /opt/odoo-server/infra/logs/backup.cron.log 2>&1
+```
+
+Para logs: `tail -f /opt/odoo-server/infra/logs/backup.cron.log`
 
 ## Estado
 
