@@ -78,8 +78,19 @@ El script descarta automáticamente los productos con precio de venta o de compr
 python3 ./migration/concatenar_csv.py --cost-index 2 --price-index 3 inventario_a.csv inventario_b.csv
 ```
 
-## Backups automáticos
+## Backups 
+Script de backup: `infra/scripts/backup.sh`
 
+Para ejecutar: 
+```bash
+bash ./infra/scripts/backup.sh
+```
+El script toma como ruta del proyecto `/opt/odoo-server/`, pero puede ser ajustada con ;a variable de entorno `BACKUP_BASE`, ej:
+```
+BACKUP_BASE=`/home/elevel/Projects/odoo`
+```
+
+### Automatización
 Los backups corren automáticamente cada día a las 23:59.
 
 Para configurar en un servidor nuevo:
