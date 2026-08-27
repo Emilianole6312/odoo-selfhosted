@@ -73,20 +73,14 @@ El backup se ejecuta en dos pasos secuenciales:
 
 **Paso 1 — Dump de PostgreeSQL**
 
-Se detiene el contenedor de Odoo para evitar escrituras durante
-el dump, garantizando consistencia entre la base de datos y el
-filestore:
-
-    docker compose stop odoo
-    docker compose exec db pg_dump -U ${ODOO_DB_USER} odoo \
-        | gzip > /opt/odoo-server/infra/volumes/backups/db_$(date +%F).sql.gz
-    docker compose start odoo
+```bash
+docker compose exec -T db pg_dump -U "$BACKUP_DB_USER" "$BACKUP_DB_NAME" | gzip > "$BACKUP_DIR/db_${DATE}.sql.gz"
+```
 
 **Paso 2 — Compresión del filestore**
-
-    tar -czf \
-        /opt/odoo-server/infra/volumes/backups/filestore_$(date +%F).tar.gz \
-        /opt/odoo-server/infra/volumes/odoo/data/
+```bash
+docker compose exec -T odoo tar -czf - /var/lib/odoo/filestore > "$BACKUP_DIR/filestore_${DATE}.tar.gz"
+```
 
 ### Destinos
 | Destino | Tipo | Que se almacena |
@@ -97,9 +91,9 @@ filestore:
 
 Los backups se transfieren automáticamente al servidor secundario y a la nube
 
-### 7.3 Automatización
+### Automatización
 
-Los backups se ejecutan automáticamente mediante cron en mixtli.
+Los backups se ejecutan automáticamente mediante cron en mixtli con el script `./infra/scripts/backup.sh`.
 
 **Configuración en crontab:**
 
