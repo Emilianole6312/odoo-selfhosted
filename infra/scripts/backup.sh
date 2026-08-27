@@ -12,7 +12,7 @@ echo "=== Iniciando backup $(date +%Y-%m-%d\ %H:%M:%S) ===" | tee -a "$LOG_FILE"
 cd "$DOCKER_COMPOSE_DIR"
 
 # Paso 1: Dump de PostgreSQL
-echo "2. Haciendo dump de BD..." | tee -a "$LOG_FILE"
+echo "1. Haciendo dump de BD..." | tee -a "$LOG_FILE"
 docker compose exec -T db pg_dump -U "$BACKUP_DB_USER" "$BACKUP_DB_NAME" | gzip > "$BACKUP_DIR/db_${DATE}.sql.gz"
 echo "   ✓ Guardado: $BACKUP_DIR/db_${DATE}.sql.gz" | tee -a "$LOG_FILE"
 
