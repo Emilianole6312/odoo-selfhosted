@@ -63,9 +63,7 @@ Los activos a proteger en esta política son:
 | Completo diario | Cada día a las 23:59 | 3 días | Backup de todos los activos | 
 | Completo semanal | Cada domingo a las 23:59 | 4 semanas | Punto de restauración extendido | 
 
-Todos los backups son de tipo completo — no se usan backups
-incrementales dado el volumen de datos manejado y la simplicidad
-de restauración que ofrece un backup completo.
+Todos los backups son de tipo completo — no se usan backups incrementales dado el volumen de datos manejado y la simplicidad de restauración que ofrece un backup completo.
 
 ### Procedimiento
 
@@ -73,19 +71,19 @@ El backup se ejecuta en dos pasos secuenciales:
 
 **Paso 1 — Dump de PostgreeSQL**
 
-```bash
-docker compose exec -T db pg_dump -U "$BACKUP_DB_USER" "$BACKUP_DB_NAME" | gzip > "$BACKUP_DIR/db_${DATE}.sql.gz"
-```
+    docker compose exec db pg_dump -U ${ODOO_DB_USER} odoo \
+        | gzip > $BACKUP_DIR/db_$(date +%F).sql.gz
 
 **Paso 2 — Compresión del filestore**
-```bash
-docker compose exec -T odoo tar -czf - /var/lib/odoo/filestore > "$BACKUP_DIR/filestore_${DATE}.tar.gz"
-```
+
+    tar -czf \
+        $BACKUP_DIR/filestore_$(date +%F).tar.gz \
+        /opt/odoo-server/infra/volumes/odoo/data/
 
 ### Destinos
 | Destino | Tipo | Que se almacena |
 | --- | --- | --- | 
-| `infra/volumes/backups/` | Local en mixtli | Backups diarios y semanales | 
+| $BACKUP_DIR | Local en mixtli | Backups diarios y semanales | 
 | Servidor secundario | on-premise | Copia offsite local | 
 | Nube | Offsite remote | Copia offsite geográficamente separada | 
 
@@ -93,7 +91,7 @@ Los backups se transfieren automáticamente al servidor secundario y a la nube
 
 ### Automatización
 
-Los backups se ejecutan automáticamente mediante cron en mixtli con el script `./infra/scripts/backup.sh`.
+Los backups se ejecutan automáticamente mediante cron en mixtli.
 
 **Configuración en crontab:**
 
