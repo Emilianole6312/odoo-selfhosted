@@ -9,7 +9,7 @@ BACKUP_DB_USER="odoo"
 BACKUP_BASE="${BACKUP_BASE:-/opt/odoo-server}"
 
 # Rutas 
-BACKUP_DIR="${BACKUP_BASE}/infra/volumes/backups"
+BACKUP_DIR="/var/backups/odoo/"
 FILESTORE_PATH="${BACKUP_BASE}/infra/volumes/odoo/data"
 DOCKER_COMPOSE_DIR="${BACKUP_BASE}/infra"
 LOG_FILE="${BACKUP_BASE}/infra/logs/backup.log"
