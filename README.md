@@ -34,20 +34,18 @@ como proyecto de referencia para prácticas de SRE/DevOps.
 Script de transformación del catálogo del POS anterior a formato Odoo 17.
 
 ### Uso
-
+Para ejecutar los scripts de migración es necesario tener pandas instalado (`sudo apt install python3-pandas`)
 ```bash
-uv run --with=pandas ./importarodoo.py inventario.csv 
+python3 ./importarodoo.py inventario.csv 
 ```
 
 Para procesar productos con precio de paquete y de pieza de forma interactiva:
 
 ```bash
-uv run --with=pandas ./procesarvariantes.py inventario_variantes.csv
+python3 ./procesarvariantes.py inventario_variantes.csv
 ```
 
-El script pregunta por cada producto si se elimina, se conserva una
-presentación o se conservan ambas. Cuando se conservan ambas, genera un
-EAN-13 para la presentación que no conserve el código original.
+El script pregunta por cada producto si se elimina, se conserva una presentación o se conservan ambas. Cuando se conservan ambas, genera un EAN-13 para la presentación que no conserve el código original.
 
 ### Archivos generados
 
@@ -78,19 +76,8 @@ El script descarta automáticamente los productos con precio de venta o de compr
 python3 ./migration/concatenar_csv.py --cost-index 2 --price-index 3 inventario_a.csv inventario_b.csv
 ```
 
-## Backups 
-Script de backup: `infra/scripts/backup.sh`
+## Backups automáticos
 
-Para ejecutar: 
-```bash
-bash ./infra/scripts/backup.sh
-```
-El script toma como ruta del proyecto `/opt/odoo-server/`, pero puede ser ajustada con ;a variable de entorno `BACKUP_BASE`, ej:
-```
-BACKUP_BASE=`/home/elevel/Projects/odoo`
-```
-
-### Automatización
 Los backups corren automáticamente cada día a las 23:59.
 
 Para configurar en un servidor nuevo:
