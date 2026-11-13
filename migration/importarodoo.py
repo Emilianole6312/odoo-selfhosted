@@ -92,14 +92,13 @@ def validar_barcode(barcode):
 
     return b, 'invalido', False
 
-def inferir_uom(presentacion):
-    """Gramaje, granel y kg → kg. Todo lo demás → Unidades"""
-    if pd.isna(presentacion):
+
+def inferir_uom(precio):
+    PATRON_PRECIO_KG = re.compile(r'\$\d+(\.\d+)?/kg\b')
+    """Precio con formato $30.00/kg → 'kg'. Todo lo demás → 'Unidades'."""
+    if pd.isna(precio):
         return 'Unidades'
-    p = str(presentacion).lower()
-    if any(u in p for u in ['kg', 'g ', 'gr', 'gramos', 'granel', 'gramaje']):
-        return 'kg'
-    return 'Unidades'
+    return 'kg' if PATRON_PRECIO_KG.search(str(precio)) else 'Unidades'
 
 # ── Separar filas con precio doble (pieza/paquete) ─────────────────────
 mask_doble   = df['Precio'].apply(es_precio_doble)
@@ -110,7 +109,7 @@ df_simple    = df[~mask_doble].copy()
 df_simple['sale_price']  = df_simple['Precio'].apply(limpiar_precio)
 df_simple['cost_price']  = df_simple['Costo'].apply(limpiar_precio)
 df_simple['existencias'] = df_simple['Existencias'].apply(limpiar_existencias)
-df_simple['uom_id']      = df_simple['Presentacion'].apply(inferir_uom)
+df_simple['uom_id']      = df_simple['Precio'].apply(inferir_uom)
 
 resultado_barcode = df_simple['Codigo barras'].apply(validar_barcode)
 df_simple['barcode']        = [r[0] for r in resultado_barcode]
