@@ -29,52 +29,47 @@ como proyecto de referencia para prácticas de SRE/DevOps.
 | IaC            |                          |
 | CI             | GitHub Actions          |
 
-## Migración 
+## Migración
 
-Script de transformación del catálogo del POS anterior a formato Odoo 17.
+Script de transformación del catálogo del POS anteriori (Tiendatek) a formato Odoo 17.
 
 ### Uso
-Para ejecutar los scripts de migración es necesario tener pandas instalado (`sudo apt install python3-pandas`)
-```bash
-python3 ./importarodoo.py inventario.csv 
-```
 
-Para procesar productos con precio de paquete y de pieza de forma interactiva:
+Para ejecutar el script de migración es necesario tener pandas instalado (`sudo apt install python3-pandas`).
 
 ```bash
-python3 ./procesarvariantes.py inventario_variantes.csv
+python3 ./migration/inventario_odoo.py inventario.csv
 ```
 
-El script pregunta por cada producto si se elimina, se conserva una presentación o se conservan ambas. Cuando se conservan ambas, genera un EAN-13 para la presentación que no conserve el código original.
+El script recibe un único CSV con las columnas `Codigo barras`, `Nombre`, `Presentacion`, `Precio` y `Costo` (las existencias se ignoran) y lo procesa en este orden:
+
+1. **Códigos de barras:** los UPC-A de 12 dígitos se normalizan a EAN-13 y se valida el dígito verificador de los EAN-13 y EAN-8. Los códigos internos de 4 dígitos se aceptan tal cual. Los dígitos verificadores **no se corrigen**: los códigos vacíos, con formato desconocido o con dígito verificador inválido se importan sin modificar y se listan en un reporte para revisarlos contra el producto físico.
+2. **Duplicados:** se buscan códigos de barras repetidos, ya normalizados. Los registros con precio de venta o costo en cero se descartan automáticamente. Si queda una sola opción válida se conserva; si quedan varias, el script pregunta cuál conservar.
+3. **Precio de paquete y de pieza** (`$24.00($6.00)`): por cada producto, el script pregunta qué versión conservar (`1` unidad, `2` paquete, `3` eliminar). Si el costo también viene en formato doble, se toma el de la versión elegida. Si los precios de paquete y de unidad son iguales, se conserva el producto sin preguntar.
+4. **Exportación:** la unidad de medida es `Unidades`, salvo los productos con precio por kilo (`$30.00/kg`), que usan `kg`.
+
+### Modo automático
+
+Para evitar las preguntas interactivas:
+
+```bash
+python3 ./migration/inventario_odoo.py inventario.csv --keep-policy first --variant-policy unidad
+```
+
+| Argumento | Valores | Efecto |
+|---|---|---|
+| `--keep-policy` | `first`, `last` | Conserva el primer o el último registro de cada código de barras duplicado |
+| `--variant-policy` | `unidad`, `paquete`, `eliminar` | Aplica la misma opción a todos los productos con precio doble |
+
+Si se interrumpe el script con `Ctrl+C`, no se genera ningún archivo.
 
 ### Archivos generados
 
+Se crean en el mismo directorio que el CSV de entrada:
+
 - `<nombre>_odoo.csv` — importar directamente en Odoo
-- `<nombre>_variantes.csv` — productos con presentación múltiple, requiere procesamiento manual
-- `<nombre>_barcodes_a_revisar.csv` — barcodes con dígito verificador inválido
-- `<nombre>_barcodes_generados.csv` — códigos generados por `procesarvariantes.py`
-- `concatenado_conservados.csv` — resultado de `migration/concatenar_csv.py` con registros únicos por código de barras
-- `concatenado_descartados.csv` — registros duplicados descartados para conservar la información
-
-### Script adicional
-
-Para concatenar dos o más CSV, ordenar por código de barras, revisar duplicados y escoger qué versión conservar, y dejar un csv listo para importar a Odoo:
-
-```bash
-python3 ./migration/concatenar_csv.py inventario_a.csv inventario_b.csv
-```
-
-El script asume que la columna del codigo de barras es la cuarta, pero puede ajustarse con el argumento `--barcode-index #`:
-
-```bash
-python3 ./migration/concatenar_csv.py --barcode-index # inventario_a.csv inventario_b.csv
-```
-
-El script descarta automáticamente los productos con precio de venta o de compra cero, para ello toma la columna #2 como precio de venta y la #3 como precio de compra, las columnas pueden se ajustadas con los argumentos `--price-index` y `--cost-index`:
- 
-```bash
-python3 ./migration/concatenar_csv.py --cost-index 2 --price-index 3 inventario_a.csv inventario_b.csv
-```
+- `<nombre>_barcodes_a_revisar.csv` — códigos vacíos, con formato inválido o dígito verificador incorrecto, con el motivo y la fila de origen
+- `<nombre>_descartados.csv` — registros descartados (duplicados y productos eliminados) con la fila de origen y el motivo
 
 ## Backups automáticos
 
