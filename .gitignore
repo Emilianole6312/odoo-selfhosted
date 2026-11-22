@@ -2,3 +2,5 @@
 migration/*.csv
 infra/volumes/backups/
 infra/logs/
+infra/secrets/*
+!infra/secrets/*.example
