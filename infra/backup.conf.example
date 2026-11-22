@@ -8,15 +8,29 @@ BACKUP_DB_USER="odoo"
 # Ruta base
 BACKUP_BASE="${BACKUP_BASE:-/opt/odoo-server}"
 
-# Rutas 
-BACKUP_DIR="/var/backups/odoo/"
-FILESTORE_PATH="${BACKUP_BASE}/infra/volumes/odoo/data"
+# Archivo de configuración de rclone (contiene el secreto de R2).
+# Vive dentro del proyecto, ignorado por git. Debe tener "export": rclone es un
+# proceso hijo y solo hereda las variables exportadas.
+export RCLONE_CONFIG="${BACKUP_BASE}/infra/secrets/rclone.conf"
+
+# Rutas
+# BACKUPS_DIR: ruta ABSOLUTA donde se guardan los backups, sin "/" al final
+# (usar $HOME, no "~": bash no expande "~" entre comillas).
+# Dentro se crean daily/ y weekly/. La carpeta temporal de cada backup
+# (BACKUP_DIR) la calcula backup.sh en cada ejecución.
+BACKUPS_DIR="/var/backups/odoo"
 DOCKER_COMPOSE_DIR="${BACKUP_BASE}/infra"
 LOG_FILE="${BACKUP_BASE}/infra/logs/backup.log"
 
-# Retención (días)
-RETENTION_DIARIO=3
-RETENTION_SEMANAL=28
+# Subida a la nube (R2): true | false
+# false: solo backups locales; el log avisa que la nube está deshabilitada.
+# Úsalo solo para pruebas o mientras se configura R2: sin nube no hay copia offsite.
+CLOUD_BACKUP="true"
 
-# Logs
-LOG_FILE="${BACKUP_BASE}/infra/logs/backup.log"
+# Cloudflare R2: remote de rclone + bucket (el remote se define en RCLONE_CONFIG)
+# Ejemplo: "r2:nombre-del-bucket". Se usan los prefijos daily/ y weekly/.
+R2_REMOTE="r2:nombre-del-bucket"
+
+# Retención: CANTIDAD de backups a conservar (entero >= 1), en local y en R2
+RETENTION_DIARIO=3
+RETENTION_SEMANAL=4
